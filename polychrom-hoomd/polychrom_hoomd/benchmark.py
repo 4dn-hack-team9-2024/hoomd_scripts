@@ -26,6 +26,7 @@ class Simulation:
         chromosome_sizes: int | List[int],
         force_dict_path: str,
         *,
+        use_wandb: bool = True,
         monomer_ids: Literal["tile"] | np.ndarray | None = None,
         monomer_kwargs: Dict[str, Any] = {},
         dT: float = 70 * T_CONV,
@@ -58,7 +59,8 @@ class Simulation:
             add_attraction_forces=add_attraction_forces,
         )
 
-        self.system = self.create_simulation(monomer_ids, random_state, monomer_kwargs)
+        self.system = self.create_simulation(
+            monomer_ids, random_state, monomer_kwargs)
         self.callbacks = callbacks
         self.trigger = trigger
 
@@ -69,7 +71,12 @@ class Simulation:
         )
 
         self.initial_snapshot = self.system.state.get_snapshot()
-        self.add_callbacks(self.callbacks, self.system, trigger=self.trigger)
+        self.add_callbacks(
+            self.callbacks,
+            self.system,
+            trigger=self.trigger,
+            use_wandb=use_wandb,
+        )
 
     @staticmethod
     def get_L(n_monomers: int, density: float) -> int:
@@ -91,7 +98,6 @@ class Simulation:
                 grow = getattr(generator, 'create_random_walk')
                 kwargs.setdefault('step_size', 1)
                 coords = grow(**kwargs)
-                # coords = np.mod(coords, self.L) - self.L // 2
                 coords_pos = coords - coords.min()
                 coords = coords_pos * (self.L - 2) / coords_pos.max()
             case 'spiral':
@@ -102,7 +108,8 @@ class Simulation:
                 coords_pos = coords - coords.min()
                 coords = coords_pos * (self.L - 2) / coords_pos.max()
             case _:
-                raise ValueError(f"Could not recognize initialization method {init}")
+                raise ValueError(
+                    f"Could not recognize initialization method {init}")
         return coords
 
     @staticmethod
@@ -187,9 +194,10 @@ class Simulation:
         return monomer_ids
 
     @staticmethod
-    def add_callbacks(callbacks, system, trigger: int = 10000) -> None:
+    def add_callbacks(callbacks, system,
+                      trigger: int = 10000, use_wandb: bool = True) -> None:
         if 'RGWriter' in callbacks:
-            rg = getattr(CB, 'RGWriter')('hoomd')
+            rg = getattr(CB, 'RGWriter')('hoomd', use_wandb=use_wandb)
             system.operations.writers.append(
                 hoomd.write.CustomWriter(action=rg, trigger=trigger)
             )
