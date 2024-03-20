@@ -4,13 +4,26 @@ import hoomd
 import numpy as np
 from polykit.analysis.polymer_analyses import Rg2
 
-import wandb
 from polychrom_hoomd.utils import get_chrom_bounds
+
+try:
+    import wandb
+except ImportError:
+    pass
 
 
 class RGWriter(hoomd.custom.Action):
-    def __init__(self, project_name: str = 'hoomd', tags: List[str] | None = None):
-        self.run = wandb.init(project=project_name, tags=tags)
+    def __init__(
+        self,
+        project_name: str = 'hoomd',
+        tags: List[str] | None = None,
+        *,
+        use_wandb: bool = True,
+    ):
+        self.use_wandb = use_wandb
+        if use_wandb:
+            self.run = wandb.init(project=project_name, tags=tags)
+        self.scores = {}
 
     def act(self, timestep):
         """Write out a new frame to the trajectory."""
@@ -32,4 +45,6 @@ class RGWriter(hoomd.custom.Action):
             rg[i] = Rg2(chrom_positions)
 
         rg_mean = np.mean(rg)
-        wandb.log({"timestep": timestep, "Rg": rg_mean})
+        self.scores[timestep] = rg_mean
+        if self.use_wandb:
+            wandb.log({"timestep": timestep, "Rg": rg_mean})
