@@ -8,12 +8,9 @@ import numpy as np
 import polykit
 import polykit.generators.initial_conformations as generator
 
-import polychrom_hoomd.build as build
-import polychrom_hoomd.forces as forces
-import polychrom_hoomd.log as log
-import polychrom_hoomd.render as render
-
+from . import build
 from . import callbacks as CB
+from . import forces, log, render
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
