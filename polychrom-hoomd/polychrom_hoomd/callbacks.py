@@ -2,9 +2,11 @@ from typing import List
 
 import hoomd
 import numpy as np
+from PIL import Image
+from polychrom_hoomd.utils import get_chrom_bounds
 from polykit.analysis.polymer_analyses import Rg2
 
-from polychrom_hoomd.utils import get_chrom_bounds
+from . import render
 
 try:
     import wandb
@@ -19,10 +21,12 @@ class RGWriter(hoomd.custom.Action):
         tags: List[str] | None = None,
         *,
         use_wandb: bool = True,
+        new_run: bool = True,
     ):
         self.use_wandb = use_wandb
         if use_wandb:
-            self.run = wandb.init(project=project_name, tags=tags)
+            if wandb.run is None and new_run:
+                self.run = wandb.init(project=project_name, tags=tags)
         self.scores = {}
 
     def act(self, timestep):
@@ -48,3 +52,28 @@ class RGWriter(hoomd.custom.Action):
         self.scores[timestep] = rg_mean
         if self.use_wandb:
             wandb.log({"timestep": timestep, "Rg": rg_mean})
+
+
+class SnapshotWriter(hoomd.custom.Action):
+    def __init__(
+        self,
+        project_name: str = 'hoomd',
+        tags: List[str] | None = None,
+        *,
+        use_wandb: bool = True,
+        new_run: bool = True,
+    ):
+        self.use_wandb = use_wandb
+        if use_wandb and new_run:
+            if wandb.run is None:
+                self.run = wandb.init(project=project_name, tags=tags)
+
+    def act(self, timestep):
+        """Write out a new frame to the trajectory."""
+        if self.use_wandb:
+            snapshot = self._state.get_snapshot()
+            image = render.fresnel(snapshot, cmap='jet').static(
+                pathtrace=False, png_output_file='tmp.png',
+            )
+            image = Image.open('tmp.png')
+            wandb.log({f"snapshot": wandb.Image(image)})

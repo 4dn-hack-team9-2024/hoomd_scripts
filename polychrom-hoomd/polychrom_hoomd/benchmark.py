@@ -40,7 +40,7 @@ class Simulation:
         init: Literal['cubic', 'spiral', 'random_walk'] = 'cubic',
         init_kwargs: Dict[str, Any] = {},
         random_state: int | None = None,
-        callbacks: List[str] | None = ['TableFormatter', 'RGWriter'],
+        callbacks: List[str] | None = ['TableFormatter', 'RGWriter', 'SnapshotWriter'],
         trigger: int = 10000,
     ):
         self.dT = dT
@@ -197,7 +197,15 @@ class Simulation:
     def add_callbacks(callbacks, system,
                       trigger: int = 10000, use_wandb: bool = True) -> None:
         if 'RGWriter' in callbacks:
-            rg = getattr(CB, 'RGWriter')('hoomd', use_wandb=use_wandb)
+            rg = getattr(CB, 'RGWriter')(
+                'hoomd', use_wandb=use_wandb, new_run=True)
+            system.operations.writers.append(
+                hoomd.write.CustomWriter(action=rg, trigger=trigger)
+            )
+
+        if 'SnapshotWriter' in callbacks:
+            rg = getattr(CB, 'SnapshotWriter')(
+                'hoomd', use_wandb=use_wandb, new_run=False)
             system.operations.writers.append(
                 hoomd.write.CustomWriter(action=rg, trigger=trigger)
             )

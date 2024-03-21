@@ -5,3 +5,6 @@ polychrom-hoomd/wandb
 polychrom-hoomd/wandb
 
 wandb
+data
+dumps
+tmp.png
